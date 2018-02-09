@@ -1,5 +1,8 @@
 # Purescript Bonsai HTML API
 
+[![Build Status](https://travis-ci.org/grmble/purescript-bonsai-html.svg?branch=master)](https://travis-ci.org/grmble/purescript-bonsai-html)
+
+
 This is a Smolder-Style HTML API for Purescript Bonsai.
 I could not use the excellent Smolder, because the Elm
 VirtualDom has a phantom type on the emitted VNodes
