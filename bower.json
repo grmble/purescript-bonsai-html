@@ -1,0 +1,24 @@
+{
+  "name": "purescript-bonsai-html",
+  "homepage": "https://grmble.github.io/purescript-bonsai/",
+  "description": "Smolder-Style HTML API for Purescript Bonsai",
+  "license": "LGPL",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/grmble/purescript-bonsai-html.git"
+  },
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^3.1.1",
+    "purescript-console": "^3.0.0",
+    "purescript-bonsai": "grmble/purescript-bonsai#master"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^3.0.0"
+  }
+}
