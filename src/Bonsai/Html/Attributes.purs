@@ -5,26 +5,14 @@ module Bonsai.Html.Attributes
 where
 
 import Prelude
-import Bonsai.VirtualDom as VD
+
 import Bonsai.Html.Internal (Style, attribute, booleanProperty, stringProperty)
-import Data.Array (intercalate, filter)
-import Data.Tuple (Tuple, snd, fst)
+import Bonsai.VirtualDom as VD
 
 -- | Create a style fragment for the Element DSL
 style :: String -> String -> Style
 style n v =
   { name: n, value: v }
-
--- | Sets space-separated class attributes for CSS
-classList :: forall msg. Array (Tuple String Boolean) -> VD.Property msg
-classList classes =
-  let
-    go = filter snd >>>
-      map fst >>>
-      intercalate ", " >>>
-      cls
-  in
-    go classes
 
 -- | Set the elements class for CSS.  Also class_
 -- |
