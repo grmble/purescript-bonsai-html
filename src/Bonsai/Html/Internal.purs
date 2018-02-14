@@ -9,25 +9,26 @@ module Bonsai.Html.Internal
   , Markup
   , MarkupF
   , MarkupT
-  , (!)
   , (!?)
-  , (#!)
+  , (!)
   , (#!?)
+  , (#!)
   , attribute
-  , stringProperty
   , booleanProperty
-  , text
-  , leaf
-  , parent
   , keyedElement
+  , leaf
+  , mapMarkup
+  , parent
   , render
   , render'
+  , stringProperty
+  , text
+  , vnode
   , withAttribute
   , withAttributes
-  , withStyle
   , withOptionalAttribute
   , withOptionalStyle
-  , vnode
+  , withStyle
   )
 where
 
@@ -93,6 +94,7 @@ instance functorMarkupF :: Functor (MarkupF msg) where
   map f (ElementF rec x) = ElementF rec (f x)
   map f (VNodeF v x) = VNodeF v (f x)
   map f (EmptyF x) = EmptyF (f x)
+
 
 type Markup msg = Free (MarkupF msg)
 type MarkupT msg = Markup msg Unit
@@ -267,3 +269,9 @@ render' elem =
               else snoc rec.attribs (VD.style $ fromFoldable $ styles2Tups rec.styles)
       in
         state \acc -> Tuple x (snoc acc (VD.node rec.name (fromFoldable a) c))
+
+
+-- | Map the markup from one message type to another.
+mapMarkup :: forall msg1 msg2. (msg1 -> msg2) -> MarkupT msg1 -> MarkupT msg2
+mapMarkup fn markup =
+  vnode $ map fn (render markup)
