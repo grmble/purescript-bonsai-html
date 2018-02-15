@@ -4,19 +4,30 @@ import Prelude
 
 import Bonsai (BONSAI, Cmd(..), ElementId(..), program)
 import Bonsai.Core (issueCommand')
-import Bonsai.DOM (DOM, affF, document, elementById, textContent)
-import Bonsai.Html (button, div_, input, p, render, text, (!))
-import Bonsai.Html.Attributes (id_, typ, value)
+import Bonsai.DOM (DOM, affF, document, elementById, innerHTML, textContent)
+import Bonsai.Html (KeyedContentF, button, div_, input, keyed, keyedElement, p, render, text, (!))
+import Bonsai.Html.Attributes (cls, id_, typ, value)
 import Bonsai.Html.Events (onClick, onInput)
 import Bonsai.JSDOM (jsdomWindow, setValue, simulantFire)
-import Bonsai.VirtualDom (VNode)
+import Bonsai.VirtualDom as VD
 import Control.Monad.Aff (liftEff')
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Free (Free)
+import Control.Monad.Rec.Class (Step(..), tailRecM)
 import Control.Plus (empty)
 import Data.Tuple (Tuple(..))
 import Test.Unit (TestF, suite, test)
 import Test.Unit.Assert as Assert
+
+
+--
+--
+--
+-- example for render/input/click test
+--
+--
+--
+
 
 data Msg
   = Input String
@@ -41,7 +52,7 @@ update (Click) model =
   Tuple empty $ model { clickCount = model.clickCount + 1 }
 
 
-view :: Model -> VNode Msg
+view :: Model -> VD.VNode Msg
 view model =
   render do
     div_ do
@@ -51,6 +62,43 @@ view model =
     p ! id_ "RT" $ text model.text
     p ! id_ "RC" $ text $ show model.clickCount
 
+
+
+
+
+--
+--
+-- example for keyedElement test - just a static rendering of a keyedElement
+--
+--
+
+data KeyedMsg
+  = Inc
+  | Dec
+
+
+keyedUpdate :: forall eff. KeyedMsg -> Int -> Tuple (Cmd eff KeyedMsg) Int
+keyedUpdate Inc i =
+  Tuple empty (i + 1)
+keyedUpdate Dec i =
+  Tuple empty (i - 1)
+
+
+keyedView :: Int -> VD.VNode KeyedMsg
+keyedView count =
+  render $
+    keyedElement "ul" ! cls "klass" $
+      tailRecM go 0
+
+  where
+    go :: Int -> Free (KeyedContentF KeyedMsg) (Step Int Unit)
+    go i =
+      if i < count
+        then do
+          keyed ("K" <> show i) (VD.node "li" [ id_ ("K" <> show i)] [ VD.text $ show i ])
+          pure $ Loop (i + 1)
+        else
+          pure $ Done unit
 
 
 
@@ -79,3 +127,11 @@ tests =
       issueCommand' prg $ Cmd [] -- will wait for render
       blubb <- affF $ elementById (ElementId "RT") doc >>= textContent
       Assert.equal "blubb" blubb
+
+    test "keyedElement" $ do
+      let win = jsdomWindow """<html><body id="main"></body></html>"""
+      doc <- affF $ win >>= document
+      prg <- liftEff' $ program (ElementId "main") keyedUpdate keyedView 3 win
+
+      k2 <- affF $ elementById (ElementId "K2") doc >>= innerHTML
+      Assert.equal "2" k2
