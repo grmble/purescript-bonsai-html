@@ -1,7 +1,9 @@
 -- | Bonsai HTML Internal module.
 -- |
--- | Implements the HTML DSL.
--- | Heavily inspired by Smolder.
+-- | Provides a smolder-style Html api, where child elements
+-- | are nested in do-blocks and attributes are given
+-- | with `!`.  Main difference to Smolder is the `msg`
+-- | type is tracked that will be emitted by event handlers.
 module Bonsai.Html.Internal
   ( class HasAttribute
   , class HasStyle
@@ -18,6 +20,9 @@ module Bonsai.Html.Internal
   , booleanProperty
   , keyed
   , keyedElement
+  , lazy
+  , lazy2
+  , lazy3
   , leaf
   , mapMarkup
   , parent
@@ -52,12 +57,20 @@ import Data.Tuple (Tuple(..))
 
 
 -- | A style that will be collected for VD.style
+-- |
+-- | Styles can be put on an element with the operators
+-- | `#!` and `#!?`.  All styles will be collected
+-- | and a style attribute will be put on the element.
 type Style =
   { name :: String
   , value :: String
   }
 
 -- | Create a custom attribute
+-- |
+-- | Attributes and properties are a long story, see
+-- | https://github.com/elm-lang/html/blob/master/properties-vs-attributes.md
+-- | for an explanation.
 attribute :: forall msg. String -> String -> VD.Property msg
 attribute =
   VD.attribute
@@ -79,6 +92,9 @@ booleanProperty =
 
 
 -- | Element record type alias
+-- |
+-- | Elements track their name, attributes and
+-- | content aka child elements.
 type Element msg =
   { name :: String
   , attribs :: CatList (VD.Property msg)
@@ -86,6 +102,12 @@ type Element msg =
   , content :: Markup msg
   }
 
+-- | KeyedElement record type
+-- |
+-- | KeyedElements have a key for every child element.
+-- | This allows for virtual dom diffing/patching,
+-- | and HTML elements for different keys will not
+-- | be reused by the virtual dom
 type KeyedElement msg =
   { name :: String
   , attribs :: CatList (VD.Property msg)
@@ -127,12 +149,19 @@ type KeyedContent msg = Free (KeyedContentF msg) Unit
 
 
 -- | Wrap a (already rendered?) VNode
+-- |
+-- | `vnode` produces markup for a virtual dom
+-- | node.  This allows interoperability between parts
+-- | of a program where the Markup api is used,
+-- | and parts where the bare virtual dom is used.
 vnode :: forall msg. VD.VNode msg -> Markup msg
 vnode v =
   liftF $ VNodeF v unit
 
 
 -- | Create a text node.
+-- |
+-- |    p ! cls "warning" $ text "You have been warned."
 text :: forall msg. String -> Markup msg
 text s =
   vnode (VD.text s)
@@ -143,6 +172,9 @@ emptyMarkup = liftF $ EmptyF unit
 
 
 -- | Create a leaf element - will not have children
+-- |
+-- | Note that for the HTML api this also means there can not be
+-- | any text in it.
 leaf :: forall msg. String -> Markup msg
 leaf name =
   liftF $ ElementF { name, attribs: empty, styles: empty, content: emptyMarkup } unit
@@ -163,6 +195,12 @@ parent name content =
 -- | when diffing.  Also keyed elements will not be reused
 -- | by nodes with different ids (e.g. when one node is
 -- | deleted).
+-- |
+-- | This can be important when dealing with browser quirks,
+-- | e.g. IE does not like it when the type of input elements
+-- | changes.  Normally the Elm virtual dom is very aggressive
+-- | about reusing existing elements, but for children of
+-- | keyedNodes with different keys this will not happen.
 -- |
 -- |
 -- |      keyedElement "ul" ! cls "klass" $ do
@@ -363,3 +401,33 @@ renderKeyedContent' content =
 mapMarkup :: forall msg1 msg2. (msg1 -> msg2) -> Markup msg1 -> Markup msg2
 mapMarkup fn markup =
   vnode $ map fn (render markup)
+
+
+-- | lazy markup.
+-- |
+-- | The elm virtual dom can have lazy nodes, they are only recomputed
+-- | if a model changes (as this is javascript side, this usually means
+-- | the object identity changes)
+-- |
+-- | This is a Markup wrapper.  The function to compute the markup
+-- | is only called if the model changed from the last render.
+-- |
+-- | Use for things like menus that only need a subset of your model
+-- | as input.
+-- |
+-- |
+-- |     lazy (viewMenu model.active) model.active
+-- |
+lazy :: forall msg a. (a -> Markup msg) -> a -> Markup msg
+lazy f a =
+  vnode $ VD.lazy (render <<< f) a
+
+-- | Lazy markup with 2 arguments.
+lazy2 :: forall msg a b. (a -> b -> Markup msg) -> a -> b -> Markup msg
+lazy2 f a b =
+  vnode $ VD.lazy2 (\x y -> render $ f x y) a b
+
+-- | Lazy markup with 3 arguments.
+lazy3 :: forall msg a b c. (a -> b -> c -> Markup msg) -> a  -> b -> c -> Markup msg
+lazy3 f a b c =
+  vnode $ VD.lazy3 (\x y z -> render $ f x y z) a b c

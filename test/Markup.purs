@@ -5,7 +5,7 @@ import Prelude
 import Bonsai (BONSAI, Cmd(..), ElementId(..), program)
 import Bonsai.Core (issueCommand')
 import Bonsai.DOM (DOM, affF, document, elementById, innerHTML, textContent)
-import Bonsai.Html (KeyedContentF, button, div_, input, keyed, keyedElement, p, render, text, (!))
+import Bonsai.Html (KeyedContentF, button, div_, input, keyed, keyedElement, lazy, lazy2, lazy3, p, render, text, (!))
 import Bonsai.Html.Attributes (cls, id_, typ, value)
 import Bonsai.Html.Events (onClick, onInput)
 import Bonsai.JSDOM (jsdomWindow, setValue, simulantFire)
@@ -101,6 +101,58 @@ keyedView count =
           pure $ Done unit
 
 
+--
+--
+--  example for the lazy test
+--
+--
+type LazyModel =
+  { l1 :: LazyChoice
+  , l2 :: LazyChoice
+  , l3 :: LazyChoice
+  }
+
+data LazyChoice
+  = LazyOne
+  | LazyTwo
+
+instance showLazyChoice :: Show LazyChoice where
+  show (LazyOne) = "C1"
+  show (LazyTwo) = "C2"
+
+
+data LazyMsg
+  = L1 LazyChoice
+  | L2 LazyChoice
+  | L3 LazyChoice
+
+
+lazyUpdate :: forall eff. LazyMsg -> LazyModel -> Tuple (Cmd eff LazyMsg) LazyModel
+lazyUpdate msg model =
+  Tuple empty
+    case msg of
+      L1 lc -> model { l1 = lc }
+      L2 lc -> model { l2 = lc }
+      L3 lc -> model { l3 = lc }
+
+lazyView :: LazyModel -> VD.VNode LazyMsg
+lazyView model =
+  render $ div_ do
+    lazy lazyViewL1 model.l1
+    lazy2 lazyViewL1L2 model.l1 model.l2
+    lazy3 lazyViewL1L2L3 model.l1 model.l2 model.l3
+
+  where
+    lazyViewL1 l1 =
+      p ! id_ "L1" $ text ("L1" <> show l1)
+    lazyViewL1L2 l1 l2 =
+      p ! id_ "L1L2" $ text ("L1" <> show l1 <> ",L2" <> show l2)
+    lazyViewL1L2L3 l1 l2 l3 =
+      p ! id_ "L1L2L3" $ text ("L1" <> show l1 <> ",L2" <> show l2 <> ",L3" <> show l3)
+
+
+
+
 
 tests :: forall eff. Free (TestF (bonsai::BONSAI,dom::DOM,console::CONSOLE|eff)) Unit
 tests =
@@ -135,3 +187,26 @@ tests =
 
       k2 <- affF $ elementById (ElementId "K2") doc >>= innerHTML
       Assert.equal "2" k2
+
+
+    test "lazy/lazy2/lazy3" $ do
+      let win = jsdomWindow """<html><body id="main"></body></html>"""
+      doc <- affF $ win >>= document
+      prg <- liftEff' $ program (ElementId "main")
+                lazyUpdate lazyView {l1: LazyOne, l2: LazyOne, l3: LazyOne}
+                win
+
+      l1 <- affF $ elementById (ElementId "L1") doc >>= textContent
+      l12 <- affF $ elementById (ElementId "L1L2") doc >>= textContent
+      l123 <- affF $ elementById (ElementId "L1L2L3") doc >>= textContent
+      Assert.equal "L1C1" l1
+      Assert.equal "L1C1,L2C1" l12
+      Assert.equal "L1C1,L2C1,L3C1" l123
+
+      issueCommand' prg $ pure (L1 LazyTwo)
+      l1' <- affF $ elementById (ElementId "L1") doc >>= textContent
+      l12' <- affF $ elementById (ElementId "L1L2") doc >>= textContent
+      l123' <- affF $ elementById (ElementId "L1L2L3") doc >>= textContent
+      Assert.equal "L1C2" l1'
+      Assert.equal "L1C2,L2C1" l12'
+      Assert.equal "L1C2,L2C1,L3C1" l123'
