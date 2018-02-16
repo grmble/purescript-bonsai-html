@@ -11,10 +11,14 @@ import Bonsai.Html.Events (onClick, onInput)
 import Bonsai.JSDOM (jsdomWindow, setValue, simulantFire)
 import Bonsai.VirtualDom as VD
 import Control.Monad.Aff (liftEff')
+import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Free (Free)
 import Control.Monad.Rec.Class (Step(..), tailRecM)
 import Control.Plus (empty)
+import Data.Foreign (readString)
+import Data.Foreign.Index as FI
+import Data.Newtype (unwrap)
 import Data.Tuple (Tuple(..))
 import Test.Unit (TestF, suite, test)
 import Test.Unit.Assert as Assert
@@ -87,7 +91,7 @@ keyedUpdate Dec i =
 keyedView :: Int -> VD.VNode KeyedMsg
 keyedView count =
   render $
-    keyedElement "ul" ! cls "klass" $
+    keyedElement "ul" ! id_ "UL" ! cls "klass" $
       tailRecM go 0
 
   where
@@ -189,8 +193,20 @@ tests =
       doc <- affF $ win >>= document
       prg <- liftEff' $ program (ElementId "main") keyedUpdate keyedView 3 win
 
+      {--
+      main <- affF $ elementById (ElementId "main") doc >>= innerHTML
+      log main
+      --}
+
+      ulKlass <- affF $ elementById (ElementId "UL") doc >>=
+                      -- class attribute is className property.
+                      (\e -> unwrap e FI.! "className") >>=
+                      readString
       k2 <- affF $ elementById (ElementId "K2") doc >>= innerHTML
+
+      Assert.equal "klass" ulKlass
       Assert.equal "2" k2
+
 
 
     test "lazy/lazy2/lazy3" $ do

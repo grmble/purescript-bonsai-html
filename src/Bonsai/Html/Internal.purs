@@ -246,12 +246,14 @@ instance hasAttributeMarkup :: HasAttribute (Free (MarkupF msg) Unit) (VD.Proper
     where
       go :: MarkupF msg ~> MarkupF msg
       go (ElementF rec x) = ElementF (rec { attribs = snoc rec.attribs prop }) x
+      go (KeyedElementF rec x) = KeyedElementF (rec { attribs = snoc rec.attribs prop }) x
       go x = x
   withAttributes elem props =
     hoistFree go elem
     where
       go :: MarkupF msg ~> MarkupF msg
       go (ElementF rec x) = ElementF (rec { attribs = rec.attribs <> props }) x
+      go (KeyedElementF rec x) = KeyedElementF (rec {attribs = rec.attribs <> props }) x
       go x = x
 
 instance hasStyleMarkup :: HasStyle (Free (MarkupF msg) Unit) where
@@ -260,6 +262,7 @@ instance hasStyleMarkup :: HasStyle (Free (MarkupF msg) Unit) where
     where
       go :: MarkupF msg ~> MarkupF msg
       go (ElementF rec x) = ElementF (rec { styles = snoc rec.styles st }) x
+      go (KeyedElementF rec x) = KeyedElementF (rec { styles = snoc rec.styles st }) x
       go x = x
 
 -- the other 2 instances are because `div ! cls "parent" $ div $ text "child"`
