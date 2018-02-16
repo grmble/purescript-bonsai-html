@@ -142,13 +142,17 @@ lazyView model =
     lazy2 lazyViewL1L2 model.l1 model.l2
     lazy3 lazyViewL1L2L3 model.l1 model.l2 model.l3
 
-  where
-    lazyViewL1 l1 =
-      p ! id_ "L1" $ text ("L1" <> show l1)
-    lazyViewL1L2 l1 l2 =
-      p ! id_ "L1L2" $ text ("L1" <> show l1 <> ",L2" <> show l2)
-    lazyViewL1L2L3 l1 l2 l3 =
-      p ! id_ "L1L2L3" $ text ("L1" <> show l1 <> ",L2" <> show l2 <> ",L3" <> show l3)
+
+-- top level to make sure they are not changing between renders
+lazyViewL1 :: LazyChoice -> VD.VNode LazyMsg
+lazyViewL1 l1 =
+  render $ p ! id_ "L1" $ text ("L1" <> show l1)
+lazyViewL1L2 :: LazyChoice -> LazyChoice -> VD.VNode LazyMsg
+lazyViewL1L2 l1 l2 =
+  render $ p ! id_ "L1L2" $ text ("L1" <> show l1 <> ",L2" <> show l2)
+lazyViewL1L2L3 :: LazyChoice -> LazyChoice -> LazyChoice -> VD.VNode LazyMsg
+lazyViewL1L2L3 l1 l2 l3 =
+  render $ p ! id_ "L1L2L3" $ text ("L1" <> show l1 <> ",L2" <> show l2 <> ",L3" <> show l3)
 
 
 

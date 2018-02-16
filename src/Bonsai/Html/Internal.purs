@@ -409,25 +409,27 @@ mapMarkup fn markup =
 -- | if a model changes (as this is javascript side, this usually means
 -- | the object identity changes)
 -- |
--- | This is a Markup wrapper.  The function to compute the markup
--- | is only called if the model changed from the last render.
+-- | These do not take `a -> Markup msg` functions because
+-- | the virtual dom also checks that the function did not change.
+-- | So, like for element handlers, you have to take care to pass
+-- | something in that preserves object identity, like a top level function.
 -- |
 -- | Use for things like menus that only need a subset of your model
 -- | as input.
 -- |
 -- |
--- |     lazy (viewMenu model.active) model.active
+-- |     lazy viewMenu model.active
 -- |
-lazy :: forall msg a. (a -> Markup msg) -> a -> Markup msg
+lazy :: forall msg a. (a -> VD.VNode msg) -> a -> Markup msg
 lazy f a =
-  vnode $ VD.lazy (render <<< f) a
+  vnode $ VD.lazy f a
 
 -- | Lazy markup with 2 arguments.
-lazy2 :: forall msg a b. (a -> b -> Markup msg) -> a -> b -> Markup msg
+lazy2 :: forall msg a b. (a -> b -> VD.VNode msg) -> a -> b -> Markup msg
 lazy2 f a b =
-  vnode $ VD.lazy2 (\x y -> render $ f x y) a b
+  vnode $ VD.lazy2 f a b
 
 -- | Lazy markup with 3 arguments.
-lazy3 :: forall msg a b c. (a -> b -> c -> Markup msg) -> a  -> b -> c -> Markup msg
+lazy3 :: forall msg a b c. (a -> b -> c -> VD.VNode msg) -> a  -> b -> c -> Markup msg
 lazy3 f a b c =
-  vnode $ VD.lazy3 (\x y z -> render $ f x y z) a b c
+  vnode $ VD.lazy3 f a b c
