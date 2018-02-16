@@ -9,6 +9,6 @@ module Bonsai.Html
   )
 where
 
-import Bonsai.Html.Internal (KeyedContent, KeyedContentF, Markup, MarkupF, (!), (!?), (#!), (#!?), attribute, keyed, keyedElement, lazy, lazy2, lazy3, text, render, render', vnode)
+import Bonsai.Html.Internal (KeyedContent, KeyedContentF, Markup, MarkupF, (!), (!?), (#!), (#!?), attribute, keyed, keyedElement, lazy, lazy2, lazy3, mapMarkup, text, render, render', vnode)
 import Bonsai.VirtualDom (VNode, Property, on, onWithOptions, defaultOptions)
 import Bonsai.Html.Elements as E
