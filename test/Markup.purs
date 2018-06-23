@@ -2,22 +2,20 @@ module Test.Markup where
 
 import Prelude
 
-import Bonsai (BONSAI, Cmd(..), ElementId(..), program)
+import Bonsai (Cmd(..), ElementId(..), program)
 import Bonsai.Core (issueCommand')
-import Bonsai.DOM (DOM, affF, document, elementById, innerHTML, textContent)
+import Bonsai.DOM (affF, document, elementById, innerHTML, textContent)
 import Bonsai.Html (KeyedContentF, button, div_, input, keyed, keyedElement, lazy, lazy2, lazy3, p, render, text, (!))
 import Bonsai.Html.Attributes (cls, id_, typ, value)
 import Bonsai.Html.Events (onClick, onInput)
-import Bonsai.JSDOM (jsdomWindow, setValue, simulantFire)
+import Bonsai.JSDOM (fireClick, fireInput, jsdomWindow, setValue)
 import Bonsai.VirtualDom as VD
-import Control.Monad.Aff (liftEff')
-import Control.Monad.Aff.Console (log)
-import Control.Monad.Eff.Console (CONSOLE)
+import Effect.Class (liftEffect)
 import Control.Monad.Free (Free)
 import Control.Monad.Rec.Class (Step(..), tailRecM)
 import Control.Plus (empty)
-import Data.Foreign (readString)
-import Data.Foreign.Index as FI
+import Foreign (readString)
+import Foreign.Index as FI
 import Data.Newtype (unwrap)
 import Data.Tuple (Tuple(..))
 import Test.Unit (TestF, suite, test)
@@ -49,7 +47,7 @@ emptyModel =
   { text: "", clickCount: 0 }
 
 
-update :: forall eff. Msg -> Model -> Tuple (Cmd eff Msg) Model
+update :: Msg -> Model -> Tuple (Cmd Msg) Model
 update (Input s) model =
   Tuple empty $ model { text = s }
 update (Click) model =
@@ -81,7 +79,7 @@ data KeyedMsg
   | Dec
 
 
-keyedUpdate :: forall eff. KeyedMsg -> Int -> Tuple (Cmd eff KeyedMsg) Int
+keyedUpdate :: KeyedMsg -> Int -> Tuple (Cmd KeyedMsg) Int
 keyedUpdate Inc i =
   Tuple empty (i + 1)
 keyedUpdate Dec i =
@@ -131,7 +129,7 @@ data LazyMsg
   | L3 LazyChoice
 
 
-lazyUpdate :: forall eff. LazyMsg -> LazyModel -> Tuple (Cmd eff LazyMsg) LazyModel
+lazyUpdate :: LazyMsg -> LazyModel -> Tuple (Cmd LazyMsg) LazyModel
 lazyUpdate msg model =
   Tuple empty
     case msg of
@@ -162,13 +160,13 @@ lazyViewL1L2L3 l1 l2 l3 =
 
 
 
-tests :: forall eff. Free (TestF (bonsai::BONSAI,dom::DOM,console::CONSOLE|eff)) Unit
+tests :: Free TestF Unit
 tests =
   suite "Bonsai.Html" do
     test "render/input/click" $ do
       let win = jsdomWindow """<html><body id="main"></body></html>"""
       doc <- affF $ win >>= document
-      prg <- liftEff' $ program (ElementId "main") update view emptyModel win
+      prg <- liftEffect $ program (ElementId "main") update view emptyModel win
 
       initialText <- affF $ elementById (ElementId "RT") doc >>= textContent
       initialCount <- affF $ elementById (ElementId "RC") doc >>= textContent
@@ -176,14 +174,14 @@ tests =
       Assert.equal "0" initialCount
 
       -- fire button click event
-      affF $ elementById (ElementId "B1") doc >>= simulantFire "click"
+      affF $ elementById (ElementId "B1") doc >>= fireClick
       issueCommand' prg $ Cmd [] -- will wait for render
       count <- affF $ elementById (ElementId "RC") doc >>= textContent
       Assert.equal "1" count
 
       -- set text input value and fire input input
       affF $ elementById (ElementId "I1") doc >>= setValue "blubb"
-      affF $ elementById (ElementId "I1") doc >>= simulantFire "input"
+      affF $ elementById (ElementId "I1") doc >>= fireInput
       issueCommand' prg $ Cmd [] -- will wait for render
       blubb <- affF $ elementById (ElementId "RT") doc >>= textContent
       Assert.equal "blubb" blubb
@@ -191,7 +189,7 @@ tests =
     test "keyedElement" $ do
       let win = jsdomWindow """<html><body id="main"></body></html>"""
       doc <- affF $ win >>= document
-      prg <- liftEff' $ program (ElementId "main") keyedUpdate keyedView 3 win
+      prg <- liftEffect $ program (ElementId "main") keyedUpdate keyedView 3 win
 
       {--
       main <- affF $ elementById (ElementId "main") doc >>= innerHTML
@@ -212,7 +210,7 @@ tests =
     test "lazy/lazy2/lazy3" $ do
       let win = jsdomWindow """<html><body id="main"></body></html>"""
       doc <- affF $ win >>= document
-      prg <- liftEff' $ program (ElementId "main")
+      prg <- liftEffect $ program (ElementId "main")
                 lazyUpdate lazyView {l1: LazyOne, l2: LazyOne, l3: LazyOne}
                 win
 
