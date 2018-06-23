@@ -14,9 +14,8 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "^4.0.1",
-    "purescript-console": "^4.1.0",
-    "purescript-bonsai": "grmble/purescript-bonsai#purs_0_12"
+    "purescript-bonsai": "grmble/purescript-bonsai#purs_0_12",
+    "purescript-free": "^5.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0",
